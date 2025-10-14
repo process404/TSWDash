@@ -2,10 +2,9 @@
 /// <reference types="@sveltejs/kit" />
 /// <reference types="vite/client" />
 
-import type { ExposeInRendererTypes } from './preload.ts';
+import type { ExposeInRendererTypes } from './preload.js';
 
 declare global {
-	// Lets typescript know about exposed preload functions
 	interface Window extends ExposeInRendererTypes {}
 
 	// See https://kit.svelte.dev/docs/types#app

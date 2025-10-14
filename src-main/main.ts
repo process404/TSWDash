@@ -3,8 +3,8 @@ import path from 'path';
 import url from 'url';
 import { stat } from 'node:fs/promises';
 import { initialiseDatabase } from './storage.ts'; 
+import pingFormation from './APIservice.ts';
 
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
 import electronSquirrelStartup from 'electron-squirrel-startup';
 if (electronSquirrelStartup) app.quit();
 
@@ -62,7 +62,7 @@ function createWindow() {
 	const mainWindow = new BrowserWindow({
 		width: 900,
 		height: 700,
-		titleBarStyle: 'hidden', // optional, recommended for overlay
+		titleBarStyle: 'hidden', 
 		titleBarOverlay: {
 			color: '#ffffff',    
 			symbolColor: '#000000', 
@@ -86,16 +86,35 @@ function createWindow() {
 app.whenReady().then(async () => {
   await setupProtocol();
 
-  // 🧩 initialize the database
   db = await initialiseDatabase();
 
-  // 🧩 IPC handlers for DB
   ipcMain.handle('get-user-data', async () => db.data.userData);
 
   ipcMain.handle('update-user-data', async (_event, newData) => {
     db.data.userData = newData;
     await db.write();
     return db.data.userData;
+  });
+
+  ipcMain.handle('ping-formation', async () => {
+    return pingFormation(db);
+  });
+
+  ipcMain.handle('open-external-link', async (_event, link) => {
+      try {
+        const { shell } = await import('electron');
+        await shell.openExternal(link);
+        return true;
+      } catch (error) {
+        console.error('Failed to open external link:', error);
+        return false;
+      }
+  });
+
+  ipcMain.handle('save-settings', async (_event, address, key) => {
+    db.data.userData.settings.apiAddress = address;
+    db.data.userData.settings.apiKey = key;
+    await db.write();
   });
 
   createWindow();
@@ -119,3 +138,4 @@ ipcMain.on('setTitleBarColors', (event, bgColor, iconColor) => {
     height: 40,
   });
 });
+

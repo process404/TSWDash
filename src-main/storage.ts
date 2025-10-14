@@ -5,8 +5,13 @@ import path from 'path';
 import fs from 'fs-extra';
 import { UserData } from '../types/user-data.js';
 
-interface Data {
-  userData: UserData;
+export interface Data {
+  userData: {
+    settings: {
+      apiAddress: string;
+      apiKey: string;
+    };
+  };
 }
 
 export async function initialiseDatabase(): Promise<Low<Data>> {
@@ -18,12 +23,9 @@ export async function initialiseDatabase(): Promise<Low<Data>> {
   const adapter = new JSONFile<Data>(dbPath);
   const db = new Low<Data>(adapter, {
     userData: {
-      name: '',
-      age: 0,
-      email: '',
       settings: {
-        theme: '',
-        notifications: true,
+        apiAddress: '',
+        apiKey: '',
       },
     },
   });
@@ -32,12 +34,9 @@ export async function initialiseDatabase(): Promise<Low<Data>> {
 
   db.data ||= {
     userData: {
-      name: '',
-      age: 0,
-      email: '',
       settings: {
-        theme: '',
-        notifications: true,
+        apiAddress : '',
+        apiKey: '',
       },
     },
   };

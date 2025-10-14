@@ -15,6 +15,9 @@ const exposeInRenderer = {
 	api: {
 		getUserData: () => ipcRenderer.invoke('get-user-data'),
 		updateUserData: (data: any) => ipcRenderer.invoke('update-user-data', data),
+		pingFormation: () => ipcRenderer.invoke('ping-formation'),
+		openExternalLink: (url: string) => ipcRenderer.invoke('open-external-link', url),
+		saveSettings: (address: any, key: any) => ipcRenderer.invoke('save-settings', address, key),
 	},
 };
 
