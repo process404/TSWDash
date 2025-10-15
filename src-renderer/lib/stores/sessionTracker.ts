@@ -1,22 +1,23 @@
 import { writable, get } from 'svelte/store';
 
 export type PingResponse = {
-	Result: 'Success' | 'Error';
-	Values?: {
-		Lat: number;
-		Lon: number;
-	};
+  Result: 'Success' | 'Error';
+  Values?: {
+    Lat: number;
+    Lon: number;
+  };
 };
 
 export const latestPingResponse = writable<PingResponse | null>(null);
+
 export type PingPoint = {
   lat: number;
   lon: number;
   timestamp: number;
-  speed?: number;           
-  heading?: number;        
-  trainId?: string;        
-  stationProximity?: string; 
+  speed?: number;
+  heading?: number;
+  trainId?: string;
+  stationProximity?: string;
 };
 
 export const pingPoint = writable<PingPoint[]>([]);
@@ -30,62 +31,91 @@ let missedPings = 0;
 const maxMissedPings = 3;
 
 export async function startPingFormationLoop() {
-	if (pingLoopRunning) return;
-	pingLoopRunning = true;
-	pingLoopActive = true;
+  if (pingLoopRunning) return;
+  pingLoopRunning = true;
+  pingLoopActive = true;
 
-	while (pingLoopActive) {
+  while (pingLoopActive) {
+    try {
+      const response: PingResponse = await window.api.pingFormation();
+
+      if (response.Result === 'Success' && response.Values) {
+        const { Lat, Lon } = response.Values;
+        const point: PingPoint = {
+          lat: Lat,
+          lon: Lon,
+          timestamp: Date.now(),
+          speed: 0,
+          heading: 0,
+        };
+
+
+        latestPingResponse.set(response);
+        pingPoint.update(path => [...path, point]);
+
+
+        if (missedPings >= maxMissedPings) {
+          console.log('[FORMATION] Reconnected – new session started');
+          pingPoint.set([point]);
+        }
+
+        missedPings = 0;
+        sessionActive.set(true);
+      } else {
+        missedPings++;
+      }
+    } catch (err) {
+      console.error('[FORMATION] Ping error:', err);
+      missedPings++;
+    }
+
+
+    if (missedPings >= maxMissedPings) {
+      if (get(sessionActive)) {
+        console.log('[FORMATION] Session ended.');
+
 		try {
-			const response: PingResponse = await window.api.pingFormation();
+	
+			const currentData = await window.api.getUserData();
 
-			if (response.Result === 'Success' && response.Values) {
-				const { Lat, Lon } = response.Values;
-				const point: PingPoint = {
-					lat: Lat,
-					lon: Lon,
+
+			const updatedData = {
+				...currentData,
+				sessions: [
+				...(currentData.sessions || []),
+				{
 					timestamp: Date.now(),
-					speed: 0,      
-					heading: 0,   
-				};
+					path: get(pingPoint),
 
-				// Record live position
-				latestPingResponse.set(response);
-				pingPoint.update(path => [...path, point]);
+				},
+			],
+		};
 
-				// If recovering from lost pings, start new session path
-				if (missedPings >= maxMissedPings) {
-					console.log('[FORMATION] Reconnected – new session started');
-					pingPoint.set([point]);
-				}
+		await window.api.updateUserData(updatedData);
 
-				missedPings = 0;
-				sessionActive.set(true);
-			} else {
-				missedPings++;
-			}
-		} catch (err) {
-			console.error('[FORMATION] Ping error:', err);
-			missedPings++;
+		console.log('[FORMATION] Session saved.');
+		} catch (e) {
+		console.error('[FORMATION] Failed to save session:', e);
 		}
 
-		if (missedPings >= maxMissedPings) {
-			if (get(sessionActive)) {
-				console.log('[FORMATION] Session ended.');
-			}
-			sessionActive.set(false);
-			latestPingResponse.set(null);
-		}
 
-		await new Promise(resolve => setTimeout(resolve, pingInterval));
-	}
+        pingPoint.set([]);
+      }
 
-	pingLoopRunning = false;
+      sessionActive.set(false);
+      latestPingResponse.set(null);
+    }
+
+    await new Promise(resolve => setTimeout(resolve, pingInterval));
+  }
+
+  pingLoopRunning = false;
 }
 
 export function stopPingFormationLoop() {
-	pingLoopActive = false;
-	pingLoopRunning = false;
-	sessionActive.set(false);
-	latestPingResponse.set(null);
-	pingPoint.set([]);
+  pingLoopActive = false;
+  pingLoopRunning = false;
+  sessionActive.set(false);
+  latestPingResponse.set(null);
+  pingPoint.set([]);
 }

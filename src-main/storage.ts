@@ -4,13 +4,20 @@ import { JSONFile } from 'lowdb/node';
 import path from 'path';
 import fs from 'fs-extra';
 import { UserData } from '../types/user-data.js';
+import { PingPoint } from '../types/ping-point.js';
+
 
 export interface Data {
   userData: {
     settings: {
       apiAddress: string;
       apiKey: string;
-    };
+    },
+    sessions?: {
+      timestamp: number;
+      path: PingPoint[];
+      stock?: any;
+    }[];
   };
 }
 
