@@ -21,4 +21,8 @@ export default defineConfig({
 		mainFields: ['module', 'jsnext:main', 'jsnext'],
 	},
 	clearScreen: false,
+	server: {
+		host: '0.0.0.0',
+		port: 5173
+	}
 });

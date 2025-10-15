@@ -8,18 +8,21 @@ import express from 'express';
 import { networkInterfaces } from 'os';
 
 const appServer = express();
-appServer.use(express.static('dist'));
+appServer.use(express.static(path.join(__dirname, '../../out/renderer')));
+
+appServer.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../../out/renderer/index.html'));
+});
 
 appServer.listen(3000, '0.0.0.0', () => {
   const nets = networkInterfaces();
-  const addresses = Object.values(nets)
+  const ips = Object.values(nets)
     .flat()
-    .filter((net) => net && net.family === 'IPv4' && !net.internal)
-    .map((net) => net?.address);
-
+    .filter((n) => n && n.family === 'IPv4' && !n.internal)
+    .map((n) => n?.address);
   console.log('Available on:');
   console.log(`  → http://localhost:3000`);
-  addresses.forEach((addr) => console.log(`  → http://${addr}:3000`));
+  ips.forEach((ip) => console.log(`  → http://${ip}:3000`));
 });
 
 import electronSquirrelStartup from 'electron-squirrel-startup';
@@ -96,7 +99,7 @@ function createWindow() {
     mainWindow.webContents.openDevTools({ mode: 'detach' }); 
     mainWindow.loadURL('http://localhost:5173');
   } else {
-    mainWindow.loadURL('app://-/');
+    mainWindow.loadURL('http://localhost:3000');
   }
 }
 
