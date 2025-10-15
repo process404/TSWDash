@@ -4,26 +4,12 @@ import url from 'url';
 import { stat } from 'node:fs/promises';
 import { initialiseDatabase } from './storage.ts'; 
 import pingFormation from './APIservice.ts';
+import { getTrainStock } from './APIservice.ts'; 
 import express from 'express';
 import { networkInterfaces } from 'os';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
 
-const appServer = express();
-appServer.use(express.static(path.join(__dirname, '../../out/renderer')));
-
-appServer.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../../out/renderer/index.html'));
-});
-
-appServer.listen(3000, '0.0.0.0', () => {
-  const nets = networkInterfaces();
-  const ips = Object.values(nets)
-    .flat()
-    .filter((n) => n && n.family === 'IPv4' && !n.internal)
-    .map((n) => n?.address);
-  console.log('Available on:');
-  console.log(`  → http://localhost:3000`);
-  ips.forEach((ip) => console.log(`  → http://${ip}:3000`));
-});
 
 import electronSquirrelStartup from 'electron-squirrel-startup';
 if (electronSquirrelStartup) app.quit();
@@ -88,6 +74,7 @@ function createWindow() {
 			symbolColor: '#000000', 
 			height: 40,           
 		},
+    title:"TSW Link",
 		webPreferences: {
 			contextIsolation: true,
 			nodeIntegration: false,
@@ -98,8 +85,29 @@ function createWindow() {
   if (isDev) {
     mainWindow.webContents.openDevTools({ mode: 'detach' }); 
     mainWindow.loadURL('http://localhost:5173');
-  } else {
-    mainWindow.loadURL('http://localhost:3000');
+  }
+  
+  if (!isDev) {
+    const appServer = express();
+
+    const rendererPath = path.join(__dirname, '../../out/renderer');
+    appServer.use(express.static(rendererPath));
+
+    appServer.get('/*', (req, res) => {
+      res.sendFile(path.join(rendererPath, 'index.html'));
+    });
+
+    appServer.listen(3000, '0.0.0.0', () => {
+      const nets = networkInterfaces();
+      const ips = Object.values(nets)
+        .flat()
+        .filter((n) => n && n.family === 'IPv4' && !n.internal)
+        .map((n) => n?.address);
+
+      console.log('Available on:');
+      console.log(`  → http://localhost:3000`);
+      ips.forEach((ip) => console.log(`  → http://${ip}:3000`));
+    });
   }
 }
 
@@ -118,6 +126,10 @@ app.whenReady().then(async () => {
 
   ipcMain.handle('ping-formation', async () => {
     return pingFormation(db);
+  });
+
+  ipcMain.handle('get-train-stock', async () => {
+    return getTrainStock(db);
   });
 
   ipcMain.handle('open-external-link', async (_event, link) => {
