@@ -4,6 +4,23 @@ import url from 'url';
 import { stat } from 'node:fs/promises';
 import { initialiseDatabase } from './storage.ts'; 
 import pingFormation from './APIservice.ts';
+import express from 'express';
+import { networkInterfaces } from 'os';
+
+const appServer = express();
+appServer.use(express.static('dist'));
+
+appServer.listen(3000, '0.0.0.0', () => {
+  const nets = networkInterfaces();
+  const addresses = Object.values(nets)
+    .flat()
+    .filter((net) => net && net.family === 'IPv4' && !net.internal)
+    .map((net) => net?.address);
+
+  console.log('Available on:');
+  console.log(`  → http://localhost:3000`);
+  addresses.forEach((addr) => console.log(`  → http://${addr}:3000`));
+});
 
 import electronSquirrelStartup from 'electron-squirrel-startup';
 if (electronSquirrelStartup) app.quit();
